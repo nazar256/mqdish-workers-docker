@@ -71,7 +71,7 @@ fi
 
 # Convert the image
 echo "[$(date -Iseconds)] Converting $image_file to $output" >&2
-convert_cmd="convert -quality $quality \"$image_file\" \"$output\""
+convert_cmd="magick convert -quality $quality \"$image_file\" \"$output\""
 echo "Debug: $convert_cmd" >&2
 if ! eval "$convert_cmd"; then
     echo "[$(date -Iseconds)] Error: Conversion failed" >&2

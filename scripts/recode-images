@@ -63,7 +63,7 @@ process_file() {
     local directory="$5"
 
     # Skip non-image files
-    if ! identify "$file" >/dev/null 2>&1; then
+    if ! magick identify "$file" >/dev/null 2>&1; then
         echo "Skipping $file (not an image)"
         return 0
     fi
