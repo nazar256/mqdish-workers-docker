@@ -1,0 +1,121 @@
+#!/bin/bash
+
+set -e
+
+quality=80
+output_format="heic"
+trash_dir=""
+base_dir=""
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --quality)
+            quality="$2"
+            shift 2
+            ;;
+        --output-format)
+            output_format="$2"
+            shift 2
+            ;;
+        --trashbin)
+            trash_dir="$2"
+            shift 2
+            ;;
+        --basedir)
+            base_dir="$2"
+            shift 2
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
+
+if [ $# -lt 1 ]; then
+    echo "Usage: $0 [--quality N] [--output-format FORMAT] [--trashbin DIR] [--basedir DIR] <image_file>"
+    exit 1
+fi
+
+image_file="$1"
+base="${image_file%.*}"
+output="${base}.${output_format}"
+
+# Expand ~ to $HOME if present
+if [ -n "$trash_dir" ]; then
+    trash_dir="${trash_dir/#\~/$HOME}"
+fi
+if [ -n "$base_dir" ]; then
+    base_dir="${base_dir/#\~/$HOME}"
+fi
+
+echo "[$(date -Iseconds)] Starting conversion of $image_file to $output_format" >&2
+echo "Debug: base_dir=$base_dir" >&2
+
+# Check if output format is different
+if [ "${image_file##*.}" = "$output_format" ]; then
+    echo "[$(date -Iseconds)] Error: Input file is already in $output_format format" >&2
+    exit 1
+fi
+
+# Check if input file exists
+if [ ! -f "$image_file" ]; then
+    echo "[$(date -Iseconds)] Error: Input file $image_file does not exist" >&2
+    exit 1
+fi
+
+# Check if it's an image
+if ! identify "$image_file" >/dev/null 2>&1; then
+    echo "[$(date -Iseconds)] Error: $image_file is not a valid image" >&2
+    exit 1
+fi
+
+# Convert the image
+echo "[$(date -Iseconds)] Converting $image_file to $output" >&2
+convert_cmd="convert -quality $quality \"$image_file\" \"$output\""
+echo "Debug: $convert_cmd" >&2
+if ! eval "$convert_cmd"; then
+    echo "[$(date -Iseconds)] Error: Conversion failed" >&2
+    exit 1
+fi
+
+# Verify the output file exists and is a valid image
+if [ ! -f "$output" ] || ! identify "$output" >/dev/null 2>&1; then
+    echo "[$(date -Iseconds)] Error: Output file verification failed" >&2
+    exit 1
+fi
+
+# Move original to trash if specified
+if [ -n "$trash_dir" ]; then
+    if [ -n "$base_dir" ]; then
+        # Get path relative to base directory
+        echo "Debug: image_file=$image_file" >&2
+        echo "Debug: base_dir=$base_dir" >&2
+        if [ ! -d "$base_dir" ]; then
+            echo "[$(date -Iseconds)] Error: Base directory $base_dir does not exist" >&2
+            exit 1
+        fi
+        # Get the relative path from the base directory
+        rel_path="$(realpath --relative-to="$base_dir" "$image_file")"
+        trash_path="$trash_dir/$rel_path"
+        echo "Debug: rel_path=$rel_path" >&2
+        echo "Debug: trash_path=$trash_path" >&2
+    else
+        # Fallback to just filename if no base directory specified
+        filename="$(basename "$image_file")"
+        trash_path="$trash_dir/$filename"
+        echo "Debug: using basename=$filename" >&2
+        echo "Debug: trash_path=$trash_path" >&2
+    fi
+    
+    # Create parent directory structure
+    trash_dir_path="$(dirname "$trash_path")"
+    mkdir -p "$trash_dir_path"
+    
+    echo "[$(date -Iseconds)] Moving original file to $trash_path" >&2
+    if ! mv "$image_file" "$trash_path"; then
+        echo "[$(date -Iseconds)] Error: Failed to move original file to trash" >&2
+        exit 1
+    fi
+fi
+
+echo "[$(date -Iseconds)] Successfully converted $image_file to $output" >&2 

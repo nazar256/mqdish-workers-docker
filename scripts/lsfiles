@@ -1,0 +1,33 @@
+#!/bin/bash
+
+set -e
+
+recursive=false
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --recursive)
+            recursive=true
+            shift
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
+
+if [ $# -lt 2 ]; then
+    echo "Usage: $0 [--recursive] <directory> <command>"
+    exit 1
+fi
+
+directory="$1"
+command="$2"
+
+# Expand ~ to $HOME if present
+directory="${directory/#\~/$HOME}"
+
+if [ "$recursive" = true ]; then
+    find "$directory" -type f -print0 | xargs -0 -I {} "$command" "{}"
+else
+    find "$directory" -maxdepth 1 -type f -print0 | xargs -0 -I {} "$command" "{}"
+fi 

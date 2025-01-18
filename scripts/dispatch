@@ -1,0 +1,30 @@
+#!/bin/bash
+
+set -e
+
+mqdish_args=()
+command_args=()
+after_separator=false
+
+# Parse arguments
+for arg in "$@"; do
+    if [ "$arg" = "--" ]; then
+        after_separator=true
+        continue
+    fi
+    
+    if [ "$after_separator" = true ]; then
+        command_args+=("$arg")
+    else
+        mqdish_args+=("$arg")
+    fi
+done
+
+# If no command arguments provided, show usage
+if [ ${#command_args[@]} -eq 0 ]; then
+    echo "Usage: $0 [mqdish_options] -- command [args...]"
+    exit 1
+fi
+
+# Construct the command and pipe it to mqdish
+echo "${command_args[*]}" | mqdish "${mqdish_args[@]}" 

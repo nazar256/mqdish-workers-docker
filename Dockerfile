@@ -1,7 +1,8 @@
 ARG BASE_IMAGE=ghcr.io/nazar256/mqdish-consumer:latest
 
 FROM --platform=${TARGETPLATFORM} ${BASE_IMAGE}
-RUN apk add --no-cache curl jq yq imagemagick exiftool ffmpeg p7zip rclone && \
+COPY ./scripts/* /usr/local/bin
+RUN apk add --no-cache curl jq yq imagemagick exiftool ffmpeg p7zip rclone bash && \
     addgroup -g 10000 -S mqdish && \
     adduser -S mqdish -G mqdish -u 10000 && \
     mkdir -p /tmp/mqdish && \

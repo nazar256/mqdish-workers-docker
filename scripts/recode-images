@@ -1,0 +1,104 @@
+#!/bin/bash
+
+set -e
+
+recursive=false
+quality=80
+min_size=""
+output_format="heic"
+trash_dir=""
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --recursive)
+            recursive=true
+            shift
+            ;;
+        --quality)
+            quality="$2"
+            shift 2
+            ;;
+        --output-format)
+            output_format="$2"
+            shift 2
+            ;;
+        --trashbin)
+            trash_dir="$2"
+            shift 2
+            ;;
+        *)
+            if [ -z "$directory" ]; then
+                directory="$1"
+            else
+                echo "Error: Multiple directories specified" >&2
+                exit 1
+            fi
+            shift
+            ;;
+    esac
+done
+
+if [ -z "$directory" ]; then
+    echo "Usage: $0 [--quality N] [--output-format FORMAT] [--trashbin DIR] [--recursive]"
+    exit 1
+fi
+
+# Expand ~ to $HOME if present
+directory="${directory/#\~/$HOME}"
+if [ -n "$trash_dir" ]; then
+    trash_dir="${trash_dir/#\~/$HOME}"
+fi
+
+# Convert to absolute paths
+directory="$(realpath "$directory")"
+if [ -n "$trash_dir" ]; then
+    trash_dir="$(realpath "$trash_dir")"
+fi
+
+process_file() {
+    local file="$1"
+    local quality="$2"
+    local output_format="$3"
+    local trash_dir="$4"
+    local directory="$5"
+
+    # Skip non-image files
+    if ! identify "$file" >/dev/null 2>&1; then
+        echo "Skipping $file (not an image)"
+        return 0
+    fi
+
+    # Skip files already in target format
+    if [ "${file##*.}" = "$output_format" ]; then
+        echo "Skipping $file (already in $output_format format)"
+        return 0
+    fi
+
+    # Build the convert-image command
+    cmd="convert-image"
+    cmd="$cmd --quality $quality"
+    cmd="$cmd --output-format $output_format"
+    if [ -n "$trash_dir" ]; then
+        cmd="$cmd --trashbin \"$trash_dir\""
+    fi
+    cmd="$cmd --basedir \"$directory\""
+    cmd="$cmd \"$file\""
+    echo "Dispatching conversion job for: $file"
+    echo "Debug: echo '$cmd' | mqdish"
+    echo "$cmd" | mqdish
+}
+
+# Process files
+if [ "$recursive" = true ]; then
+    find "$directory" -type f | while read -r file; do
+        process_file "$file" "$quality" "$output_format" "$trash_dir" "$directory"
+    done
+else
+    for file in "$directory"/*; do
+        if [ -f "$file" ]; then
+            process_file "$file" "$quality" "$output_format" "$trash_dir" "$directory"
+        fi
+    done
+fi
+
+exit $exit_code 
