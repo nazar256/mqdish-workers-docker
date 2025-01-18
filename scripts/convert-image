@@ -87,16 +87,13 @@ fi
 # Move original to trash if specified
 if [ -n "$trash_dir" ]; then
     if [ -n "$base_dir" ]; then
-        # Get path relative to base directory
-        echo "Debug: image_file=$image_file" >&2
-        echo "Debug: base_dir=$base_dir" >&2
-        if [ ! -d "$base_dir" ]; then
-            echo "[$(date -Iseconds)] Error: Base directory $base_dir does not exist" >&2
-            exit 1
-        fi
-        # Get the relative path from the base directory
-        rel_path="$(realpath --relative-to="$base_dir" "$image_file")"
+        # Get path relative to base directory without using realpath
+        full_image_path="$(cd "$(dirname "$image_file")" && pwd)/$(basename "$image_file")"
+        full_base_path="$(cd "$base_dir" && pwd)"
+        rel_path="${full_image_path#$full_base_path/}"
         trash_path="$trash_dir/$rel_path"
+        echo "Debug: full_image_path=$full_image_path" >&2
+        echo "Debug: full_base_path=$full_base_path" >&2
         echo "Debug: rel_path=$rel_path" >&2
         echo "Debug: trash_path=$trash_path" >&2
     else
