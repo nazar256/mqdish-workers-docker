@@ -1,8 +1,11 @@
 ARG BASE_IMAGE=ghcr.io/nazar256/mqdish-consumer:latest
-ARG VERSION=latest
 ARG TARGETPLATFORM
 
 FROM --platform=${TARGETPLATFORM} ${BASE_IMAGE}
+
+# Need to redeclare ARG after FROM to make it available in this stage
+ARG TARGETPLATFORM
+ARG VERSION=latest
 
 COPY ./scripts/* /usr/local/bin
 RUN apk add --no-cache curl jq yq imagemagick exiftool ffmpeg p7zip rclone bash && \
