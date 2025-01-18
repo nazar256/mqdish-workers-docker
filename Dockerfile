@@ -18,6 +18,7 @@ RUN apk add --no-cache curl jq yq imagemagick exiftool ffmpeg p7zip rclone bash 
 RUN case "${TARGETPLATFORM}" in \
         "linux/amd64")  ARCH="x86_64-unknown-linux-musl" ;; \
         "linux/arm64/v8")  ARCH="aarch64-unknown-linux-musl" ;; \
+        "linux/arm64")  ARCH="aarch64-unknown-linux-musl" ;; \
         "linux/arm/v7")  ARCH="armv7-unknown-linux-musleabihf" ;; \
         "linux/ppc64le")  ARCH="powerpc64le-unknown-linux-gnu" ;; \
         *) echo "Unsupported platform: ${TARGETPLATFORM}" && exit 1 ;; \
