@@ -64,7 +64,7 @@ if [ ! -f "$image_file" ]; then
 fi
 
 # Check if it's an image
-if ! identify "$image_file" >/dev/null 2>&1; then
+if ! magick identify "$image_file" >/dev/null 2>&1; then
     echo "[$(date -Iseconds)] Error: $image_file is not a valid image" >&2
     exit 1
 fi
@@ -79,7 +79,7 @@ if ! eval "$convert_cmd"; then
 fi
 
 # Verify the output file exists and is a valid image
-if [ ! -f "$output" ] || ! identify "$output" >/dev/null 2>&1; then
+if [ ! -f "$output" ] || ! magick identify "$output" >/dev/null 2>&1; then
     echo "[$(date -Iseconds)] Error: Output file verification failed" >&2
     exit 1
 fi

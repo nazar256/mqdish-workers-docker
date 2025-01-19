@@ -62,14 +62,17 @@ process_file() {
     local trash_dir="$4"
     local directory="$5"
 
-    # Skip non-image files
-    if ! magick identify "$file" >/dev/null 2>&1; then
-        echo "Skipping $file (not an image)"
+    # Convert filename and extension to lowercase for comparison
+    local filename_lower="$(echo "$file" | tr '[:upper:]' '[:lower:]')"
+    
+    # Skip non-image files by extension
+    if [[ ! "$filename_lower" =~ \.(jpg|jpeg|png|gif|bmp|webp|tiff|tif)$ ]]; then
+        echo "Skipping $file (not an image by extension)"
         return 0
     fi
 
-    # Skip files already in target format
-    if [ "${file##*.}" = "$output_format" ]; then
+    # Skip files already in target format (case insensitive)
+    if [[ "$filename_lower" =~ \.${output_format,,}$ ]]; then
         echo "Skipping $file (already in $output_format format)"
         return 0
     fi
