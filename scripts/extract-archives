@@ -1,0 +1,88 @@
+#!/bin/bash
+
+set -e
+
+recursive=false
+trash_dir=""
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --recursive)
+            recursive=true
+            shift
+            ;;
+        --trashbin)
+            trash_dir="$2"
+            shift 2
+            ;;
+        *)
+            if [ -z "$directory" ]; then
+                directory="$1"
+            else
+                echo "Error: Multiple directories specified" >&2
+                exit 1
+            fi
+            shift
+            ;;
+    esac
+done
+
+if [ -z "$directory" ]; then
+    echo "Usage: $0 [--trashbin DIR] [--recursive] <directory>"
+    exit 1
+fi
+
+# Expand ~ to $HOME if present
+directory="${directory/#\~/$HOME}"
+if [ -n "$trash_dir" ]; then
+    trash_dir="${trash_dir/#\~/$HOME}"
+fi
+
+# Convert to absolute paths
+directory="$(realpath "$directory")"
+if [ -n "$trash_dir" ]; then
+    trash_dir="$(realpath "$trash_dir")"
+fi
+
+process_file() {
+    local file="$1"
+    local trash_dir="$2"
+    local directory="$3"
+
+    # Convert filename and extension to lowercase for comparison
+    local filename_lower="$(echo "$file" | tr '[:upper:]' '[:lower:]')"
+    
+    # Skip non-archive files by extension
+    if [[ ! "$filename_lower" =~ \.(zip|7z|rar|tar|gz|bz2|xz|tgz|tbz2|txz)$ ]]; then
+        echo "Skipping $file (not an archive by extension)"
+        return 0
+    fi
+
+    # Build the extract-archive command
+    cmd="extract-archive"
+    if [ -n "$trash_dir" ]; then
+        cmd="$cmd --trashbin \"$trash_dir\""
+    fi
+    cmd="$cmd --basedir \"$directory\""
+    cmd="$cmd \"$file\""
+    echo "Dispatching extraction job for: $file"
+    echo "Debug: echo '$cmd' | mqdish"
+    echo "$cmd" | mqdish
+}
+
+exit_code=0
+
+# Process files
+if [ "$recursive" = true ]; then
+    find "$directory" -type f | while read -r file; do
+        process_file "$file" "$trash_dir" "$directory" || exit_code=1
+    done
+else
+    for file in "$directory"/*; do
+        if [ -f "$file" ]; then
+            process_file "$file" "$trash_dir" "$directory" || exit_code=1
+        fi
+    done
+fi
+
+exit $exit_code 

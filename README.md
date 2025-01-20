@@ -119,37 +119,44 @@ convert-audio --quality 2 --trashbin ~/trash "audio.mp3"
 # After successful conversion, moves original to ~/trash/audio.mp3
 ```
 
-- [recode-audios](scripts/recode-audios) - finds audio files in a directory and dispatches conversion jobs:
+- [extract-archive](scripts/extract-archive) - extracts a single archive with smart directory detection:
 
 ```bash
-# Basic usage - convert all audio files to AAC with default quality (VBR 2)
-recode-audios --recursive --trashbin ~/trash "~/Music"
+extract-archive --trashbin ~/trash "archive.zip"
+# Extracts archive.zip with smart directory detection:
+#  - If archive contains single root folder: extracts to current directory
+#  - If archive contains multiple items: creates directory named like archive
+# Examples:
+#  - archive.zip containing folder "data/" -> extracts to ./data/
+#  - archive.zip containing multiple files -> extracts to ./archive/
+# After successful extraction, moves original to ~/trash/archive.zip
+```
 
-# Convert with higher quality
-recode-audios --recursive --quality 1 --trashbin ~/trash "~/Music"
+- [extract-archives](scripts/extract-archives) - finds archives in a directory and dispatches extraction jobs:
+
+```bash
+# Basic usage - extract all archives in current directory
+extract-archives --trashbin ~/trash "."
+
+# Extract all archives recursively
+extract-archives --recursive --trashbin ~/trash "~/Downloads"
 
 # The script will:
-# 1. Find all audio files in the specified directory
-# 2. Skip files that:
-#    - Are already in m4a/aac format
-#    - Are not audio files (by extension)
-# 3. For each valid audio file, dispatch a convert-audio job using mqdish
-# 4. The consumer will execute each job, converting audio and moving originals
-#    to the trash directory (if specified) only after successful conversion
+# 1. Find all archives in the specified directory
+# 2. Skip files that are not archives (by extension)
+# 3. For each archive, dispatch an extract-archive job using mqdish
+# 4. The consumer will execute each job:
+#    - Analyze archive contents
+#    - Create target directory if needed
+#    - Extract with smart directory detection
+#    - Move original to trash if specified
 #
-# Quality (VBR) guide:
-# - Range: 1-5 (lower number = higher quality, larger file)
-# - 2 is the default, good balance of quality and size
-# - 1 for high-quality music
-# - 3-4 for voice/podcasts
-# - 5 for maximum compression (may affect quality)
+# Supported formats (with p7zip):
+# - zip, 7z, rar (with unrar)
+# - tar, gz, bz2, xz
+# - tgz, tbz2, txz
 ```
 
-- [dispatch](scripts/dispatch) - simply passes all it's arguments as is as STDIN to `mqdish`. But could also pass arguments to `mqdish` as well.
+- [recode-audios](scripts/recode-audios) - finds audio files in a directory and dispatches conversion jobs:
 
-```bash
-dispatch --topic "test" -- "echo 'Hello'"
-# results in:
-# echo 'Hello' | mqdish --topic "test"
 ```
-

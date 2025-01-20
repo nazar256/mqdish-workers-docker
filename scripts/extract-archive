@@ -1,0 +1,168 @@
+#!/bin/bash
+
+set -e
+
+trash_dir=""
+base_dir=""
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --trashbin)
+            trash_dir="$2"
+            shift 2
+            ;;
+        --basedir)
+            base_dir="$2"
+            shift 2
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
+
+if [ $# -lt 1 ]; then
+    echo "Usage: $0 [--trashbin DIR] [--basedir DIR] <archive_file>"
+    exit 1
+fi
+
+archive_file="$1"
+archive_dir="$(dirname "$archive_file")"
+archive_name="$(basename "$archive_file")"
+archive_base="${archive_name%.*}"
+
+# Expand ~ to $HOME if present
+if [ -n "$trash_dir" ]; then
+    trash_dir="${trash_dir/#\~/$HOME}"
+fi
+if [ -n "$base_dir" ]; then
+    base_dir="${base_dir/#\~/$HOME}"
+fi
+
+echo "[$(date -Iseconds)] Starting extraction of $archive_file" >&2
+echo "Debug: base_dir=$base_dir" >&2
+
+# Check if input file exists
+if [ ! -f "$archive_file" ]; then
+    echo "[$(date -Iseconds)] Error: Input file $archive_file does not exist" >&2
+    exit 1
+fi
+
+# Create a temporary directory for listing contents
+temp_dir="$(mktemp -d)"
+trap 'rm -rf "$temp_dir"' EXIT
+
+# List archive contents to determine root items
+echo "[$(date -Iseconds)] Analyzing archive contents" >&2
+
+# Use unrar for RAR archives, 7z for others
+filename_lower="$(echo "$archive_file" | tr '[:upper:]' '[:lower:]')"
+if [[ "$filename_lower" =~ \.rar$ ]]; then
+    if ! unrar l -v "$archive_file" > "$temp_dir/list.txt"; then
+        echo "[$(date -Iseconds)] Error: Failed to list archive contents" >&2
+        exit 1
+    fi
+    # Parse unrar output
+    root_items=()
+    while IFS= read -r line; do
+        if [[ "$line" =~ ^[[:space:]]*Name:[[:space:]]*(.*)$ ]]; then
+            path="${BASH_REMATCH[1]}"
+            root_part="${path%%/*}"
+            if [ -n "$root_part" ] && [[ ! " ${root_items[@]} " =~ " ${root_part} " ]]; then
+                root_items+=("$root_part")
+            fi
+        fi
+    done < "$temp_dir/list.txt"
+else
+    if ! 7z l -slt "$archive_file" > "$temp_dir/list.txt"; then
+        echo "[$(date -Iseconds)] Error: Failed to list archive contents" >&2
+        exit 1
+    fi
+    # Parse 7z output
+    root_items=()
+    while IFS= read -r line; do
+        if [[ "$line" =~ ^Path\ =\ (.*)$ ]]; then
+            path="${BASH_REMATCH[1]}"
+            # Skip the archive name itself
+            if [ "$path" = "$archive_name" ]; then
+                continue
+            fi
+            # Remove archive name prefix if present
+            path="${path#$archive_name/}"
+            root_part="${path%%/*}"
+            if [ -n "$root_part" ] && [[ ! " ${root_items[@]} " =~ " ${root_part} " ]]; then
+                root_items+=("$root_part")
+            fi
+        fi
+    done < "$temp_dir/list.txt"
+fi
+
+# Debug output
+echo "Debug: Found root items: ${root_items[*]}" >&2
+
+# Create a temporary directory for extraction
+extract_temp="$(mktemp -d)"
+trap 'rm -rf "$temp_dir" "$extract_temp"' EXIT
+
+# Extract the archive to temporary directory first
+echo "[$(date -Iseconds)] Extracting archive to temporary location" >&2
+if [[ "$filename_lower" =~ \.rar$ ]]; then
+    if ! unrar x -o+ "$archive_file" "$extract_temp/"; then
+        echo "[$(date -Iseconds)] Error: Extraction failed" >&2
+        exit 1
+    fi
+else
+    if ! 7z x -y -o"$extract_temp" "$archive_file"; then
+        echo "[$(date -Iseconds)] Error: Extraction failed" >&2
+        exit 1
+    fi
+fi
+
+# Determine target directory and move files appropriately
+if [ ${#root_items[@]} -eq 1 ] && [[ "${root_items[0]}" != *"."* ]]; then
+    # Single root item without extension - move the directory itself
+    target_dir="$archive_dir"
+    echo "[$(date -Iseconds)] Single root item detected (${root_items[0]}), extracting to: $target_dir" >&2
+    # Move the directory itself, not its contents
+    mv "$extract_temp/${root_items[0]}" "$target_dir/"
+else
+    # Multiple root items or single file - create named directory
+    target_dir="$archive_dir/$archive_base"
+    echo "[$(date -Iseconds)] Multiple root items detected, extracting to: $target_dir" >&2
+    mkdir -p "$target_dir"
+    # Move all extracted contents to target
+    mv "$extract_temp"/* "$target_dir/"
+fi
+
+# Move original to trash if specified
+if [ -n "$trash_dir" ]; then
+    if [ -n "$base_dir" ]; then
+        # Get path relative to base directory without using realpath
+        full_archive_path="$(cd "$(dirname "$archive_file")" && pwd)/$(basename "$archive_file")"
+        full_base_path="$(cd "$base_dir" && pwd)"
+        rel_path="${full_archive_path#$full_base_path/}"
+        trash_path="$trash_dir/$rel_path"
+        echo "Debug: full_archive_path=$full_archive_path" >&2
+        echo "Debug: full_base_path=$full_base_path" >&2
+        echo "Debug: rel_path=$rel_path" >&2
+        echo "Debug: trash_path=$trash_path" >&2
+    else
+        # Fallback to just filename if no base directory specified
+        filename="$(basename "$archive_file")"
+        trash_path="$trash_dir/$filename"
+        echo "Debug: using basename=$filename" >&2
+        echo "Debug: trash_path=$trash_path" >&2
+    fi
+
+    # Create parent directory structure
+    trash_dir_path="$(dirname "$trash_path")"
+    mkdir -p "$trash_dir_path"
+
+    echo "[$(date -Iseconds)] Moving original file to $trash_path" >&2
+    if ! mv "$archive_file" "$trash_path"; then
+        echo "[$(date -Iseconds)] Error: Failed to move original file to trash" >&2
+        exit 1
+    fi
+fi
+
+echo "[$(date -Iseconds)] Successfully extracted $archive_file" >&2 
