@@ -3,9 +3,7 @@
 set -e
 
 recursive=false
-quality=80
-min_size=""
-output_format="heic"
+quality=2  # VBR quality (1-5, where 2 is a good default for HE-AAC v2)
 trash_dir=""
 
 while [[ $# -gt 0 ]]; do
@@ -16,10 +14,6 @@ while [[ $# -gt 0 ]]; do
             ;;
         --quality)
             quality="$2"
-            shift 2
-            ;;
-        --output-format)
-            output_format="$2"
             shift 2
             ;;
         --trashbin)
@@ -39,7 +33,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [ -z "$directory" ]; then
-    echo "Usage: $0 [--quality N] [--output-format FORMAT] [--trashbin DIR] [--recursive]"
+    echo "Usage: $0 [--quality N] [--trashbin DIR] [--recursive] <directory>"
     exit 1
 fi
 
@@ -58,29 +52,27 @@ fi
 process_file() {
     local file="$1"
     local quality="$2"
-    local output_format="$3"
-    local trash_dir="$4"
-    local directory="$5"
+    local trash_dir="$3"
+    local directory="$4"
 
     # Convert filename and extension to lowercase for comparison
     local filename_lower="$(echo "$file" | tr '[:upper:]' '[:lower:]')"
     
-    # Skip non-image files by extension
-    if [[ ! "$filename_lower" =~ \.(jpg|jpeg|png|gif|bmp|webp|tiff|tif|heic|heif|raw)$ ]]; then
-        echo "Skipping $file (not an image by extension)"
+    # Skip non-audio files by extension
+    if [[ ! "$filename_lower" =~ \.(mp3|wav|wma|ogg|flac|aiff|m4a|aac|opus|ape)$ ]]; then
+        echo "Skipping $file (not an audio file by extension)"
         return 0
     fi
 
-    # Skip files already in target format (case insensitive)
-    if [[ "$filename_lower" =~ \.${output_format,,}$ ]]; then
-        echo "Skipping $file (already in $output_format format)"
+    # Skip m4a files (assuming they're already AAC)
+    if [[ "$filename_lower" =~ \.(m4a|aac)$ ]]; then
+        echo "Skipping $file (already in m4a/aac format)"
         return 0
     fi
 
-    # Build the convert-image command
-    cmd="convert-image"
+    # Build the convert-audio command
+    cmd="convert-audio"
     cmd="$cmd --quality $quality"
-    cmd="$cmd --output-format $output_format"
     if [ -n "$trash_dir" ]; then
         cmd="$cmd --trashbin \"$trash_dir\""
     fi
@@ -91,15 +83,17 @@ process_file() {
     echo "$cmd" | mqdish
 }
 
+exit_code=0
+
 # Process files
 if [ "$recursive" = true ]; then
     find "$directory" -type f | while read -r file; do
-        process_file "$file" "$quality" "$output_format" "$trash_dir" "$directory"
+        process_file "$file" "$quality" "$trash_dir" "$directory" || exit_code=1
     done
 else
     for file in "$directory"/*; do
         if [ -f "$file" ]; then
-            process_file "$file" "$quality" "$output_format" "$trash_dir" "$directory"
+            process_file "$file" "$quality" "$trash_dir" "$directory" || exit_code=1
         fi
     done
 fi

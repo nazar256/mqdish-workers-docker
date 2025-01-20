@@ -1,0 +1,113 @@
+#!/bin/bash
+
+set -e
+
+quality=2  # VBR quality (1-5, where 2 is a good default for HE-AAC v2)
+trash_dir=""
+base_dir=""
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --quality)
+            quality="$2"
+            shift 2
+            ;;
+        --trashbin)
+            trash_dir="$2"
+            shift 2
+            ;;
+        --basedir)
+            base_dir="$2"
+            shift 2
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
+
+if [ $# -lt 1 ]; then
+    echo "Usage: $0 [--quality N] [--trashbin DIR] [--basedir DIR] <audio_file>"
+    exit 1
+fi
+
+audio_file="$1"
+base="${audio_file%.*}"
+output="${base}.m4a"
+
+# Expand ~ to $HOME if present
+if [ -n "$trash_dir" ]; then
+    trash_dir="${trash_dir/#\~/$HOME}"
+fi
+if [ -n "$base_dir" ]; then
+    base_dir="${base_dir/#\~/$HOME}"
+fi
+
+echo "[$(date -Iseconds)] Starting conversion of $audio_file to AAC" >&2
+echo "Debug: base_dir=$base_dir" >&2
+
+# Check if input file exists
+if [ ! -f "$audio_file" ]; then
+    echo "[$(date -Iseconds)] Error: Input file $audio_file does not exist" >&2
+    exit 1
+fi
+
+# Check if it's an audio file using ffprobe
+if ! ffprobe -v error -select_streams a:0 -show_entries stream=codec_type -of default=noprint_wrappers=1:nokey=1 "$audio_file" | grep -q "^audio$"; then
+    echo "[$(date -Iseconds)] Error: $audio_file is not a valid audio file" >&2
+    exit 1
+fi
+
+# Check if input is already AAC encoded
+if ffprobe -v error -select_streams a:0 -show_entries stream=codec_name -of default=noprint_wrappers=1:nokey=1 "$audio_file" | grep -q "^aac$"; then
+    echo "[$(date -Iseconds)] Error: Input file is already AAC encoded" >&2
+    exit 1
+fi
+
+# Convert the audio
+echo "[$(date -Iseconds)] Converting $audio_file to AAC" >&2
+convert_cmd="ffmpeg -i \"$audio_file\" -vn -c:a libfdk_aac -profile:a aac_he_v2 -vbr $quality \"$output\""
+echo "Debug: $convert_cmd" >&2
+if ! eval "$convert_cmd"; then
+    echo "[$(date -Iseconds)] Error: Conversion failed" >&2
+    exit 1
+fi
+
+# Verify the output file exists
+if [ ! -f "$output" ]; then
+    echo "[$(date -Iseconds)] Error: Output file verification failed" >&2
+    exit 1
+fi
+
+# Move original to trash if specified
+if [ -n "$trash_dir" ]; then
+    if [ -n "$base_dir" ]; then
+        # Get path relative to base directory without using realpath
+        full_audio_path="$(cd "$(dirname "$audio_file")" && pwd)/$(basename "$audio_file")"
+        full_base_path="$(cd "$base_dir" && pwd)"
+        rel_path="${full_audio_path#$full_base_path/}"
+        trash_path="$trash_dir/$rel_path"
+        echo "Debug: full_audio_path=$full_audio_path" >&2
+        echo "Debug: full_base_path=$full_base_path" >&2
+        echo "Debug: rel_path=$rel_path" >&2
+        echo "Debug: trash_path=$trash_path" >&2
+    else
+        # Fallback to just filename if no base directory specified
+        filename="$(basename "$audio_file")"
+        trash_path="$trash_dir/$filename"
+        echo "Debug: using basename=$filename" >&2
+        echo "Debug: trash_path=$trash_path" >&2
+    fi
+
+    # Create parent directory structure
+    trash_dir_path="$(dirname "$trash_path")"
+    mkdir -p "$trash_dir_path"
+
+    echo "[$(date -Iseconds)] Moving original file to $trash_path" >&2
+    if ! mv "$audio_file" "$trash_path"; then
+        echo "[$(date -Iseconds)] Error: Failed to move original file to trash" >&2
+        exit 1
+    fi
+fi
+
+echo "[$(date -Iseconds)] Successfully converted $audio_file to AAC" >&2 
