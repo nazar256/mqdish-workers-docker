@@ -31,6 +31,10 @@ archive_dir="$(dirname "$archive_file")"
 archive_name="$(basename "$archive_file")"
 archive_base="${archive_name%.*}"
 
+# Get absolute paths
+archive_file="$(cd "$(dirname "$archive_file")" && pwd)/$(basename "$archive_file")"
+archive_dir="$(dirname "$archive_file")"
+
 # Expand ~ to $HOME if present
 if [ -n "$trash_dir" ]; then
     trash_dir="${trash_dir/#\~/$HOME}"
@@ -55,22 +59,19 @@ trap 'rm -rf "$temp_dir"' EXIT
 # List archive contents to determine root items
 echo "[$(date -Iseconds)] Analyzing archive contents" >&2
 
-# Use unrar for RAR archives, 7z for others
+# Use bsdtar for RAR archives, 7z for others
 filename_lower="$(echo "$archive_file" | tr '[:upper:]' '[:lower:]')"
 if [[ "$filename_lower" =~ \.rar$ ]]; then
-    if ! unrar l -v "$archive_file" > "$temp_dir/list.txt"; then
+    if ! bsdtar -tf "$archive_file" > "$temp_dir/list.txt"; then
         echo "[$(date -Iseconds)] Error: Failed to list archive contents" >&2
         exit 1
     fi
-    # Parse unrar output
+    # Parse bsdtar output (one file per line)
     root_items=()
-    while IFS= read -r line; do
-        if [[ "$line" =~ ^[[:space:]]*Name:[[:space:]]*(.*)$ ]]; then
-            path="${BASH_REMATCH[1]}"
-            root_part="${path%%/*}"
-            if [ -n "$root_part" ] && [[ ! " ${root_items[@]} " =~ " ${root_part} " ]]; then
-                root_items+=("$root_part")
-            fi
+    while IFS= read -r path; do
+        root_part="${path%%/*}"
+        if [ -n "$root_part" ] && [[ ! " ${root_items[@]} " =~ " ${root_part} " ]]; then
+            root_items+=("$root_part")
         fi
     done < "$temp_dir/list.txt"
 else
@@ -107,7 +108,7 @@ trap 'rm -rf "$temp_dir" "$extract_temp"' EXIT
 # Extract the archive to temporary directory first
 echo "[$(date -Iseconds)] Extracting archive to temporary location" >&2
 if [[ "$filename_lower" =~ \.rar$ ]]; then
-    if ! unrar x -o+ "$archive_file" "$extract_temp/"; then
+    if ! (cd "$extract_temp" && bsdtar -xf "$archive_file"); then
         echo "[$(date -Iseconds)] Error: Extraction failed" >&2
         exit 1
     fi
@@ -124,7 +125,7 @@ if [ ${#root_items[@]} -eq 1 ] && [[ "${root_items[0]}" != *"."* ]]; then
     target_dir="$archive_dir"
     echo "[$(date -Iseconds)] Single root item detected (${root_items[0]}), extracting to: $target_dir" >&2
     # Move the directory itself, not its contents
-    mv "$extract_temp/${root_items[0]}" "$target_dir/"
+    mv "$extract_temp"/"${root_items[0]}" "$target_dir/"
 else
     # Multiple root items or single file - create named directory
     target_dir="$archive_dir/$archive_base"
@@ -138,7 +139,7 @@ fi
 if [ -n "$trash_dir" ]; then
     if [ -n "$base_dir" ]; then
         # Get path relative to base directory without using realpath
-        full_archive_path="$(cd "$(dirname "$archive_file")" && pwd)/$(basename "$archive_file")"
+        full_archive_path="$archive_file"  # Already absolute
         full_base_path="$(cd "$base_dir" && pwd)"
         rel_path="${full_archive_path#$full_base_path/}"
         trash_path="$trash_dir/$rel_path"

@@ -8,7 +8,7 @@ ARG TARGETPLATFORM
 ARG VERSION=latest
 
 COPY ./scripts/* /usr/local/bin
-RUN apk add --no-cache curl jq yq imagemagick exiftool ffmpeg p7zip unrar unzip rclone bash && \
+RUN apk add --no-cache curl jq yq imagemagick exiftool ffmpeg p7zip libarchive-tools unzip rclone bash && \
     addgroup -g 10000 -S mqdish && \
     adduser -S mqdish -G mqdish -u 10000 && \
     mkdir -p /tmp/mqdish && \
