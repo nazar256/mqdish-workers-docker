@@ -2,11 +2,11 @@
 
 A docker container for MqDiSh consumer. Also includes `mqdish` CLI tool for dispatching jobs by the consumer.
 
+With these tools MqDish shines and basically was the reason I developed it. Example use-case is to automatically extract archives, convert photos, audio and video files in directories recursively using distributed workers across multiple machines available (for instance, laptop, RaspberryPI and VPS machines). Thus I can keep my gallery archive in the most efficient format, save storage and use all available machines for that.
+
 ## Installation
 
-The scripts in this repository are designed to be used from PATH. You can:
-
-1. Copy/symlink the scripts to a directory that's already in your PATH:
+The scripts in this repository are designed to be used from PATH. You can opy/symlink the scripts to a directory that's already in your PATH:
 ```bash
 # Option 1: Copy
 sudo cp scripts/* /usr/local/bin/
@@ -16,6 +16,14 @@ sudo ln -s "$(pwd)/scripts/"* /usr/local/bin/
 ```
 
 ## Included tools
+
+### FFmpeg
+
+FFmpeg is built from source as the latest (current) version 7.1 with libfdk-aac 2.0.3 support.
+
+### Alpine packages
+
+To see installed packages refer to the [Dockerfile](Dockerfile).
 
 ### Scripts
 
@@ -71,12 +79,12 @@ recode-images --recursive --quality 80 --min-size 1000x1000 --output-format heic
 - [convert-video](scripts/convert-video) - converts a single video to HEVC/x265 format with high-quality settings:
 
 ```bash
-convert-video --quality 28 --trashbin ~/trash "video.mp4"
+convert-video --quality 28 --basedir ./ --trashbin ~/trash "video.mp4"
 # Converts video.mp4 to video.mkv using HEVC/x265 codec
-# Uses high quality settings:
+# Uses the following quality settings:
 #  - preset=slower for better compression
 #  - CRF=28 (adjustable with --quality, range 0-51, lower is better)
-#  - AAC audio with quality=3
+#  - AAC audio with HE-AAC v2 profile and vbr quality 3
 #  - Copies all subtitles and preserves metadata
 # After successful conversion, moves original to ~/trash/video.mp4
 ```
@@ -151,12 +159,67 @@ extract-archives --recursive --trashbin ~/trash "~/Downloads"
 #    - Extract with smart directory detection
 #    - Move original to trash if specified
 #
-# Supported formats (with p7zip):
-# - zip, 7z, rar (with unrar)
+# Supported formats:
+# - zip, 7z, rar
 # - tar, gz, bz2, xz
 # - tgz, tbz2, txz
 ```
 
 - [recode-audios](scripts/recode-audios) - finds audio files in a directory and dispatches conversion jobs:
 
+```bash
+# Basic usage - convert all audio files to AAC with default quality (VBR 2)
+recode-audios --recursive --trashbin ~/trash "~/Music"
+
+# Convert with higher quality
+recode-audios --recursive --quality 2 --trashbin ~/trash "~/Music"
+
+# The script will:
+# 1. Find all audio files in the specified directory
+# 2. Skip files that:
+#    - Are already in m4a/aac format
+#    - Are not audio files (by extension)
+# 3. For each valid audio file, dispatch a convert-audio job using mqdish
+# 4. The consumer will execute each job, converting audio and moving originals
+#    to the trash directory (if specified) only after successful conversion
+#
+# Quality (VBR) guide:
+# - Range: 1-3 (lower number = lower quality, smaller file)
+# - 2 is the default, good balance of quality and size
+# - values 4 and 5 are supported but don't make much sense since AAC HE-AAC v2 profile is used
+#
+# Supported formats:
+# - mp3, wav, wma, ogg
+# - flac, aiff, opus, ape
+# All files will be converted to m4a using HE-AAC v2 profile
+# for maximum compression while maintaining good quality
+```
+
+## Real use case
+
+Here are some examples of real use case usage with samba NAS storage mounted to containers in Docker Swarm cluster:
+
+### Unpack all archives detecting directories automatically
+
+```bash
+dispatch --topic mqdish-single -- extract-archives --recursiv
+e --trashbin /mnt/trashbin/aria-downloads /mnt/aria-downloads
+```
+
+### Convert all images to HEIC with 30% quality
+
+```bash
+dispatch --topic mqdish-one-per-host -- recode-images --recursive --quality 30 --output-format heic --trashbin /mnt/trashbin/gallery /mnt/gallery
+```
+
+### Convert all videos to HEVC with 20 CRF
+
+```bash
+dispatch --topic mqdish -- recode-videos --recursive --quality 20 --trashbin /mnt/trashbin/gallery /mnt/gallery
+```
+
+### Convert all audio to HE-AAC v2 with 2 VBR
+
+```bash
+dispatch --topic mqdish -- recode-audios --recursive --quality 2 --trashbin /mnt/trashbin/audiobooks /mnt/audiobooks
 ```
