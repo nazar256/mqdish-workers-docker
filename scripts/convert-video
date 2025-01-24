@@ -66,9 +66,13 @@ fi
 
 # Convert the video
 echo "[$(date -Iseconds)] Converting $video_file to HEVC" >&2
-convert_cmd="ffmpeg -nostats -y -i \"$video_file\" -map 0 $ffmpeg_args \"$output\""
-echo "Debug: $convert_cmd" >&2
-if ! eval "$convert_cmd"; then
+# Use array to properly handle arguments with spaces
+ffmpeg_cmd=(ffmpeg -nostats -y -i "$video_file" -map 0)
+# Split ffmpeg_args into array elements
+read -ra ffmpeg_args_array <<< "$ffmpeg_args"
+ffmpeg_cmd+=("${ffmpeg_args_array[@]}" "$output")
+echo "Debug: ${ffmpeg_cmd[*]}" >&2
+if ! "${ffmpeg_cmd[@]}"; then
     echo "[$(date -Iseconds)] Error: Conversion failed" >&2
     exit 1
 fi
@@ -86,7 +90,7 @@ if [ -n "$trash_dir" ]; then
         full_video_path="$(cd "$(dirname "$video_file")" && pwd)/$(basename "$video_file")"
         full_base_path="$(cd "$base_dir" && pwd)"
         rel_path="${full_video_path#$full_base_path/}"
-        trash_pamp/ffmpeg-buildth="$trash_dir/$rel_path"
+        trash_path="$trash_dir/$rel_path"
         echo "Debug: full_video_path=$full_video_path" >&2
         echo "Debug: full_base_path=$full_base_path" >&2
         echo "Debug: rel_path=$rel_path" >&2

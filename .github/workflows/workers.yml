@@ -7,10 +7,6 @@ on:
         description: 'MqDish version to use'
         required: false
         type: string
-      ff_version:
-        description: 'FFmpeg version to use'
-        required: false
-        type: string
       base_image_version:
         description: 'Base image version to use'
         required: false
