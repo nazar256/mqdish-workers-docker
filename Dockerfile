@@ -50,7 +50,7 @@ RUN apk add --no-cache curl \
 COPY --from=ffmpeg /usr/bin/ffmpeg /usr/bin/
 COPY --from=ffmpeg /usr/bin/ffprobe /usr/bin/
 COPY --from=ffmpeg /usr/lib/* /usr/lib/
-COPY --from=ffmpeg /usr/local/lib/* /usr/local/lib/
+COPY --from=ffmpeg /usr/local/lib/lib* /usr/local/lib/
 COPY --from=mqdish-cli /usr/local/bin/mqdish /usr/local/bin/mqdish
 COPY ./scripts/* /usr/local/bin
 
