@@ -2,7 +2,7 @@
 
 A docker container for MqDiSh consumer. Also includes `mqdish` CLI tool for dispatching jobs by the consumer.
 
-With these tools MqDish shines and basically was the reason I developed it. Example use-case is to automatically extract archives, convert photos, audio and video files in directories recursively using distributed workers across multiple machines available (for instance, laptop, RaspberryPI and VPS machines). Thus I can keep my gallery archive in the most efficient format, save storage and use all available machines for that.
+With these tools MqDish shines and basically was the reason I developed it. Example use-case is to automatically extract archives, convert photos, audio and video files in directories recursively using distributed workers across multiple machines available (for instance, laptops, desktops, RaspberryPI and VPS machines). Thus I can keep my gallery archive in the most efficient format, save storage and use all available machines for that.
 
 ## Installation
 
@@ -76,27 +76,34 @@ recode-images --recursive --quality 80 --min-size 1000x1000 --output-format heic
 #    to the trash directory (if specified) only after successful conversion
 ```
 
-- [convert-video](scripts/convert-video) - converts a single video to HEVC/x265 format with high-quality settings:
+- [convert-video](scripts/convert-video) - converts a single video to HEVC/x265 format with customizable settings:
 
 ```bash
-convert-video --quality 28 --basedir ./ --trashbin ~/trash "video.mp4"
-# Converts video.mp4 to video.mkv using HEVC/x265 codec
-# Uses the following quality settings:
-#  - preset=slower for better compression
-#  - CRF=28 (adjustable with --quality, range 0-51, lower is better)
+# Basic usage with default high-quality settings
+convert-video --trashbin ~/trash "video.mp4"
+# Default settings:
+#  - HEVC/x265 codec with preset=slower
+#  - CRF=28 for good quality/size balance
 #  - AAC audio with HE-AAC v2 profile and vbr quality 3
 #  - Copies all subtitles and preserves metadata
-# After successful conversion, moves original to ~/trash/video.mp4
+
+# Custom FFmpeg arguments for specific needs
+convert-video --ffmpeg-args "-c:v libx265 -preset veryslow -crf 23 -c:a libfdk_aac -vbr 5" --trashbin ~/trash "video.mp4"
+# Uses custom FFmpeg settings:
+#  - veryslow preset for better compression
+#  - CRF 23 for higher quality
+#  - Higher audio bitrate (vbr 5)
 ```
 
 - [recode-videos](scripts/recode-videos) - finds videos in a directory and dispatches conversion jobs:
 
 ```bash
-# Basic usage - convert all videos to HEVC with default quality (CRF 28)
+# Basic usage - convert all videos with default settings
 recode-videos --recursive --trashbin ~/trash "~/Videos"
 
-# Convert with higher quality (lower CRF means higher quality)
-recode-videos --recursive --quality 23 --trashbin ~/trash "~/Videos"
+# Custom encoding settings for higher quality
+recode-videos --recursive --ffmpeg-args "-c:v libx265 -preset slower -crf 18 -c:a libfdk_aac -profile:a aac_he_v2 -vbr 3 -c:s copy -tag:v hvc1
+" --trashbin ~/trash "~/Videos"
 
 # The script will:
 # 1. Find all videos in the specified directory
@@ -107,24 +114,8 @@ recode-videos --recursive --quality 23 --trashbin ~/trash "~/Videos"
 # 4. The consumer will execute each job, converting videos and moving originals
 #    to the trash directory (if specified) only after successful conversion
 #
-# Quality (CRF) guide:
-# - Range: 0-51 (lower number = higher quality, larger file)
-# - 28 is the default, good balance of quality and size
-# - 23-28 is usually visually lossless
-# - 18-23 for high-quality archival
-# - Below 18 is usually overkill
-```
-
-- [convert-audio](scripts/convert-audio) - converts a single audio file to AAC format with high-efficiency settings:
-
-```bash
-convert-audio --quality 2 --trashbin ~/trash "audio.mp3"
-# Converts audio.mp3 to audio.m4a using AAC codec
-# Uses high-efficiency settings:
-#  - HE-AAC v2 profile for maximum compression
-#  - VBR mode with quality 2 (adjustable with --quality, range 1-5)
-#  - Optimized for low bitrate while maintaining good quality
-# After successful conversion, moves original to ~/trash/audio.mp3
+# Default FFmpeg arguments:
+# -c:v libx265 -preset slower -crf 28 -c:a libfdk_aac -profile:a aac_he_v2 -vbr 3 -c:s copy -tag:v hvc1
 ```
 
 - [extract-archive](scripts/extract-archive) - extracts a single archive with smart directory detection:
@@ -165,14 +156,31 @@ extract-archives --recursive --trashbin ~/trash "~/Downloads"
 # - tgz, tbz2, txz
 ```
 
+- [convert-audio](scripts/convert-audio) - converts a single audio file to AAC format with customizable settings:
+
+```bash
+# Basic usage with default high-efficiency settings
+convert-audio --trashbin ~/trash "audio.mp3"
+# Default settings:
+#  - AAC codec with HE-AAC profile
+#  - VBR mode with quality 2
+#  - Optimized for low bitrate while maintaining good quality
+
+# Custom FFmpeg arguments for different quality/profile
+convert-audio --ffmpeg-args "-c:a libfdk_aac -profile:a aac_low -b:a 256k" --trashbin ~/trash "audio.mp3"
+# Uses custom FFmpeg settings:
+#  - AAC-LC profile for higher quality
+#  - Fixed bitrate of 256k
+```
+
 - [recode-audios](scripts/recode-audios) - finds audio files in a directory and dispatches conversion jobs:
 
 ```bash
-# Basic usage - convert all audio files to AAC with default quality (VBR 2)
+# Basic usage - convert all audio files with default settings
 recode-audios --recursive --trashbin ~/trash "~/Music"
 
-# Convert with higher quality
-recode-audios --recursive --quality 2 --trashbin ~/trash "~/Music"
+# Custom encoding settings for higher quality
+recode-audios --recursive --ffmpeg-args "-c:a libfdk_aac -profile:a aac_low -b:a 256k" --trashbin ~/trash "~/Music"
 
 # The script will:
 # 1. Find all audio files in the specified directory
@@ -183,27 +191,23 @@ recode-audios --recursive --quality 2 --trashbin ~/trash "~/Music"
 # 4. The consumer will execute each job, converting audio and moving originals
 #    to the trash directory (if specified) only after successful conversion
 #
-# Quality (VBR) guide:
-# - Range: 1-3 (lower number = lower quality, smaller file)
-# - 2 is the default, good balance of quality and size
-# - values 4 and 5 are supported but don't make much sense since AAC HE-AAC v2 profile is used
+# Default FFmpeg arguments:
+# -vn -c:a libfdk_aac -profile:a aac_he -vbr 2
 #
 # Supported formats:
 # - mp3, wav, wma, ogg
 # - flac, aiff, opus, ape
-# All files will be converted to m4a using HE-AAC v2 profile
-# for maximum compression while maintaining good quality
+# All files will be converted to m4a format
 ```
 
 ## Real use case
 
-Here are some examples of real use case usage with samba NAS storage mounted to containers in Docker Swarm cluster:
+Here are some examples of real use case usage with samba NAS storage mounted to containers in Docker Swarm cluster built on Tailscale:
 
 ### Unpack all archives detecting directories automatically
 
 ```bash
-dispatch --topic mqdish-single -- extract-archives --recursiv
-e --trashbin /mnt/trashbin/aria-downloads /mnt/aria-downloads
+dispatch --topic mqdish-single -- extract-archives --recursive --trashbin /mnt/trashbin/aria-downloads /mnt/aria-downloads
 ```
 
 ### Convert all images to HEIC with 30% quality
@@ -212,14 +216,22 @@ e --trashbin /mnt/trashbin/aria-downloads /mnt/aria-downloads
 dispatch --topic mqdish-one-per-host -- recode-images --recursive --quality 30 --output-format heic --trashbin /mnt/trashbin/gallery /mnt/gallery
 ```
 
-### Convert all videos to HEVC with 20 CRF
+### Convert all videos to HEVC with custom settings
 
 ```bash
-dispatch --topic mqdish -- recode-videos --recursive --quality 20 --trashbin /mnt/trashbin/gallery /mnt/gallery
+# High quality archival settings
+dispatch --topic mqdish -- recode-videos --recursive --ffmpeg-args "-c:v libx265 -preset veryslow -crf 23 -c:a libfdk_aac -vbr 5" --trashbin /mnt/trashbin/gallery /mnt/gallery
+
+# Maximum compression settings
+dispatch --topic mqdish -- recode-videos --recursive --ffmpeg-args "-c:v libx265 -preset veryslow -crf 32 -c:a libfdk_aac -profile:a aac_he_v2 -vbr 2" --trashbin /mnt/trashbin/gallery /mnt/gallery
 ```
 
-### Convert all audio to HE-AAC v2 with 2 VBR
+### Convert all audio to AAC with custom settings
 
 ```bash
-dispatch --topic mqdish -- recode-audios --recursive --quality 2 --trashbin /mnt/trashbin/audiobooks /mnt/audiobooks
+# High quality music settings
+dispatch --topic mqdish -- recode-audios --recursive --ffmpeg-args "-c:a libfdk_aac -profile:a aac_low -b:a 256k" --trashbin /mnt/trashbin/music /mnt/music
+
+# Maximum compression for audiobooks
+dispatch --topic mqdish -- recode-audios --recursive --ffmpeg-args "-c:a libfdk_aac -profile:a aac_he_v2 -vbr 2" --trashbin /mnt/trashbin/audiobooks /mnt/audiobooks
 ```

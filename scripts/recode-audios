@@ -3,7 +3,7 @@
 set -e
 
 recursive=false
-quality=2  # VBR quality (1-5, where 2 is a good default for HE-AAC v2)
+ffmpeg_args="-vn -c:a libfdk_aac -profile:a aac_he -vbr 2"  # Default FFmpeg arguments
 trash_dir=""
 
 while [[ $# -gt 0 ]]; do
@@ -12,8 +12,8 @@ while [[ $# -gt 0 ]]; do
             recursive=true
             shift
             ;;
-        --quality)
-            quality="$2"
+        --ffmpeg-args)
+            ffmpeg_args="$2"
             shift 2
             ;;
         --trashbin)
@@ -33,7 +33,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [ -z "$directory" ]; then
-    echo "Usage: $0 [--quality N] [--trashbin DIR] [--recursive] <directory>"
+    echo "Usage: $0 [--ffmpeg-args \"ARGS\"] [--trashbin DIR] [--recursive] <directory>"
     exit 1
 fi
 
@@ -51,7 +51,7 @@ fi
 
 process_file() {
     local file="$1"
-    local quality="$2"
+    local ffmpeg_args="$2"
     local trash_dir="$3"
     local directory="$4"
 
@@ -72,7 +72,7 @@ process_file() {
 
     # Build the convert-audio command
     cmd="convert-audio"
-    cmd="$cmd --quality $quality"
+    cmd="$cmd --ffmpeg-args \"$ffmpeg_args\""
     if [ -n "$trash_dir" ]; then
         cmd="$cmd --trashbin \"$trash_dir\""
     fi
@@ -88,12 +88,12 @@ exit_code=0
 # Process files
 if [ "$recursive" = true ]; then
     find "$directory" -type f | while read -r file; do
-        process_file "$file" "$quality" "$trash_dir" "$directory" || exit_code=1
+        process_file "$file" "$ffmpeg_args" "$trash_dir" "$directory" || exit_code=1
     done
 else
     for file in "$directory"/*; do
         if [ -f "$file" ]; then
-            process_file "$file" "$quality" "$trash_dir" "$directory" || exit_code=1
+            process_file "$file" "$ffmpeg_args" "$trash_dir" "$directory" || exit_code=1
         fi
     done
 fi

@@ -6,12 +6,22 @@ on:
       mqdish_version:
         description: 'MqDish version to use'
         required: false
-        default: '1.2.0'
         type: string
       ff_version:
         description: 'FFmpeg version to use'
         required: false
-        default: '7.1'
+        type: string
+      base_image_version:
+        description: 'Base image version to use'
+        required: false
+        type: string
+      alpine_version:
+        description: 'Alpine version to use'
+        required: false
+        type: string
+      ffmpeg_image_version:
+        description: 'FFmpeg image version to use'
+        required: false
         type: string
   push:
     tags:
@@ -20,8 +30,9 @@ on:
 env:
   RELEASE_VERSION: ${{ github.ref_type == 'tag' && github.ref_name }}
   MQDISH_VERSION: ${{ inputs.mqdish_version || '1.2.0' }}
-  FF_VERSION: ${{ inputs.ff_version || '7.1' }}
-
+  BASE_IMAGE_VERSION: ${{ inputs.base_image_version || 'latest' }}
+  ALPINE_VERSION: ${{ inputs.alpine_version || '3.18' }}
+  FFMPEG_IMAGE_VERSION: ${{ inputs.ffmpeg_image_version || 'latest' }}
 jobs:
   buildx:
     runs-on: ubuntu-latest
@@ -41,7 +52,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
         with:
-          platforms: linux/arm64/v8,linux/arm/v7,linux/ppc64le,linux/amd64
+          platforms: linux/arm64/v8,linux/arm/v7,linux/ppc64le,linux/amd64,linux/386
 
       - name: Log in to registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $ --password-stdin
@@ -49,13 +60,15 @@ jobs:
       - name: Build
         uses: docker/build-push-action@v4
         with:
-          platforms: linux/arm64/v8,linux/arm/v7,linux/amd64
+          platforms: linux/amd64,linux/386
+          # platforms: linux/arm64/v8,linux/arm/v7,linux/amd64,linux/386
           push: true
           tags: |
             ghcr.io/${{ github.repository_owner }}/mqdish-worker-full:${{ env.RELEASE_VERSION }}
             ghcr.io/${{ github.repository_owner }}/mqdish-worker-full:latest
           build-args: |
-            BASE_IMAGE=ghcr.io/${{ github.repository_owner }}/mqdish-consumer:latest
+            BASE_IMAGE_VERSION=${{ env.BASE_IMAGE_VERSION }}
             MQDISH_VERSION=${{ env.MQDISH_VERSION }}
-            FF_VERSION=${{ env.FF_VERSION }}
+            ALPINE_VERSION=${{ env.ALPINE_VERSION }}
+            FFMPEG_IMAGE_VERSION=${{ env.FFMPEG_IMAGE_VERSION }}
           context: .
