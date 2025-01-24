@@ -9,7 +9,9 @@ base_dir=""
 while [[ $# -gt 0 ]]; do
     case $1 in
         --ffmpeg-args)
-            ffmpeg_args="$2"
+            # Strip any surrounding quotes
+            ffmpeg_args="${2#\"}"
+            ffmpeg_args="${ffmpeg_args%\"}"
             shift 2
             ;;
         --trashbin)

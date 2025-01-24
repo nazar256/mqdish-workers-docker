@@ -72,12 +72,13 @@ process_file() {
 
     # Build the convert-audio command
     cmd="convert-audio"
-    cmd="$cmd --ffmpeg-args \"$ffmpeg_args\""
+    # Preserve quotes by wrapping ffmpeg_args in additional quotes
+    cmd="$cmd --ffmpeg-args '\"$ffmpeg_args\"'"
     if [ -n "$trash_dir" ]; then
-        cmd="$cmd --trashbin \"$trash_dir\""
+        cmd="$cmd --trashbin $(printf %q "$trash_dir")"
     fi
-    cmd="$cmd --basedir \"$directory\""
-    cmd="$cmd \"$file\""
+    cmd="$cmd --basedir $(printf %q "$directory")"
+    cmd="$cmd $(printf %q "$file")"
     echo "Dispatching conversion job for: $file"
     echo "Debug: echo '$cmd' | mqdish"
     echo "$cmd" | mqdish

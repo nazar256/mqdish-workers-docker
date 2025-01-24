@@ -72,8 +72,8 @@ process_file() {
 
     # Build the convert-video command
     cmd="convert-video"
-    # Use printf %q to properly escape the ffmpeg_args
-    cmd="$cmd --ffmpeg-args $(printf %q "$ffmpeg_args")"
+    # Preserve quotes by wrapping ffmpeg_args in additional quotes
+    cmd="$cmd --ffmpeg-args '\"$ffmpeg_args\"'"
     if [ -n "$trash_dir" ]; then
         cmd="$cmd --trashbin $(printf %q "$trash_dir")"
     fi

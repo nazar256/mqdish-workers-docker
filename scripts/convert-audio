@@ -9,7 +9,9 @@ base_dir=""
 while [[ $# -gt 0 ]]; do
     case $1 in
         --ffmpeg-args)
-            ffmpeg_args="$2"
+            # Strip any surrounding quotes
+            ffmpeg_args="${2#\"}"
+            ffmpeg_args="${ffmpeg_args%\"}"
             shift 2
             ;;
         --trashbin)
@@ -66,9 +68,13 @@ fi
 
 # Convert the audio
 echo "[$(date -Iseconds)] Converting $audio_file to AAC" >&2
-convert_cmd="ffmpeg -nostats -y -vn -i \"$audio_file\" $ffmpeg_args \"$output\""
-echo "Debug: $convert_cmd" >&2
-if ! eval "$convert_cmd"; then
+# Use array to properly handle arguments with spaces
+ffmpeg_cmd=(ffmpeg -nostats -y -i "$audio_file")
+# Split ffmpeg_args into array elements
+read -ra ffmpeg_args_array <<< "$ffmpeg_args"
+ffmpeg_cmd+=("${ffmpeg_args_array[@]}" "$output")
+echo "Debug: ${ffmpeg_cmd[*]}" >&2
+if ! "${ffmpeg_cmd[@]}"; then
     echo "[$(date -Iseconds)] Error: Conversion failed" >&2
     exit 1
 fi
