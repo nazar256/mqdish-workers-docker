@@ -7,7 +7,7 @@ ARG FFMPEG_IMAGE_VERSION=latest
 
 FROM ghcr.io/nazar256/ffmpeg:${FFMPEG_IMAGE_VERSION} AS ffmpeg
 
-FROM alpine:${ALPINE_VERSION} as mqish-cli
+FROM alpine:${ALPINE_VERSION} AS mqdish-cli
 
 ARG MQDISH_VERSION
 ARG TARGETPLATFORM
