@@ -66,7 +66,7 @@ fi
 
 # Convert the audio
 echo "[$(date -Iseconds)] Converting $audio_file to AAC" >&2
-convert_cmd="ffmpeg -y -i \"$audio_file\" -vn -c:a libfdk_aac -profile:a aac_he -vbr $quality \"$output\""
+convert_cmd="ffmpeg -nostats -y -i \"$audio_file\" -vn -c:a libfdk_aac -profile:a aac_he -vbr $quality \"$output\""
 echo "Debug: $convert_cmd" >&2
 if ! eval "$convert_cmd"; then
     echo "[$(date -Iseconds)] Error: Conversion failed" >&2
