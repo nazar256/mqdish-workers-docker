@@ -213,25 +213,17 @@ dispatch --topic mqdish-single -- extract-archives --recursive --trashbin /mnt/t
 ### Convert all images to HEIC with 30% quality
 
 ```bash
-dispatch --topic mqdish-one-per-host -- recode-images --recursive --quality 30 --output-format heic --trashbin /mnt/trashbin/gallery /mnt/gallery
+dispatch --topic mqdish-singlethreaded -- recode-images --recursive --quality 30 --output-format heic --trashbin /mnt/trashbin/gallery /mnt/gallery
 ```
 
 ### Convert all videos to HEVC with custom settings
 
 ```bash
-# High quality archival settings
-dispatch --topic mqdish -- recode-videos --recursive --ffmpeg-args "-c:v libx265 -preset veryslow -crf 23 -c:a libfdk_aac -vbr 5" --trashbin /mnt/trashbin/gallery /mnt/gallery
-
-# Maximum compression settings
-dispatch --topic mqdish -- recode-videos --recursive --ffmpeg-args "-c:v libx265 -preset veryslow -crf 32 -c:a libfdk_aac -profile:a aac_he_v2 -vbr 2" --trashbin /mnt/trashbin/gallery /mnt/gallery
+dispatch --topic mqdish-multithreaded -- recode-videos --recursive --ffmpeg-args "-c:v libx265 -preset veryslow -crf 16 -c:a libfdk_aac -profile:a aac_he_v2 -vbr 1" --trashbin /mnt/trashbin/gallery /mnt/gallery
 ```
 
 ### Convert all audio to AAC with custom settings
 
 ```bash
-# High quality music settings
-dispatch --topic mqdish -- recode-audios --recursive --ffmpeg-args "-c:a libfdk_aac -profile:a aac_low -b:a 256k" --trashbin /mnt/trashbin/music /mnt/music
-
-# Maximum compression for audiobooks
-dispatch --topic mqdish -- recode-audios --recursive --ffmpeg-args "-c:a libfdk_aac -profile:a aac_he_v2 -vbr 2" --trashbin /mnt/trashbin/audiobooks /mnt/audiobooks
+dispatch --topic mqdish-singlethreaded -- recode-audios --recursive --ffmpeg-args "-c:a libfdk_aac -profile:a aac_he_v2 -vbr 2" --trashbin /mnt/trashbin/audiobooks /mnt/audiobooks
 ```
