@@ -207,7 +207,7 @@ Here are some examples of real use case usage with samba NAS storage mounted to 
 ### Unpack all archives detecting directories automatically
 
 ```bash
-dispatch --topic mqdish-single -- extract-archives --recursive --trashbin /mnt/trashbin/aria-downloads /mnt/aria-downloads
+dispatch --topic mqdish-multithreaded -- extract-archives --recursive --trashbin /mnt/trashbin/aria-downloads /mnt/aria-downloads
 ```
 
 ### Convert all images to HEIC with 30% quality
