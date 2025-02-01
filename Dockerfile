@@ -2,6 +2,7 @@
 ARG BASE_IMAGE_VERSION=latest
 ARG TARGETPLATFORM
 ARG MQDISH_VERSION=1.2.0
+ARG RUSTY_WRENCHES_VERSION=1.0.0
 ARG ALPINE_VERSION=3.18
 ARG FFMPEG_IMAGE_VERSION=latest
 
@@ -12,23 +13,40 @@ FROM alpine:${ALPINE_VERSION} AS mqdish-cli
 ARG MQDISH_VERSION
 ARG TARGETPLATFORM
 
-# Map Docker architecture to release artifact architecture
 RUN case "${TARGETPLATFORM}" in \
         "linux/amd64")  ARCH="x86_64-unknown-linux-musl" ;; \
+        "linux/386")  ARCH="i686-unknown-linux-musl" ;; \
         "linux/arm64/v8")  ARCH="aarch64-unknown-linux-musl" ;; \
         "linux/arm64")  ARCH="aarch64-unknown-linux-musl" ;; \
         "linux/arm/v7")  ARCH="armv7-unknown-linux-musleabihf" ;; \
+        "linux/arm/v6")  ARCH="arm-unknown-linux-musleabi" ;; \
         "linux/ppc64le")  ARCH="powerpc64le-unknown-linux-gnu" ;; \
+        "linux/s390x")  ARCH="s390x-unknown-linux-gnu" ;; \
         *) echo "Unsupported platform: ${TARGETPLATFORM}" && exit 1 ;; \
     esac && \
     echo "Downloading mqdish for ${ARCH}" && \
     wget -O /tmp/mqdish.tar.gz "https://github.com/nazar256/mqdish/releases/download/${MQDISH_VERSION}/mqdish.${ARCH}.tar.gz" && \
     cd /tmp && \
     tar xzf mqdish.tar.gz && \
-    cp target/${ARCH}/release/mqdish /usr/local/bin/ && \
-    rm -rf target mqdish.tar.gz && \
+    cp mqdish /usr/local/bin/ && \
     chmod +x /usr/local/bin/mqdish
 
+RUN case "${TARGETPLATFORM}" in \
+        "linux/amd64")  ARCH="x86_64-unknown-linux-musl" ;; \
+        "linux/386")  ARCH="i686-unknown-linux-musl" ;; \
+        "linux/arm64/v8")  ARCH="aarch64-unknown-linux-musl" ;; \
+        "linux/arm64")  ARCH="aarch64-unknown-linux-musl" ;; \
+        "linux/arm/v7")  ARCH="armv7-unknown-linux-musleabihf" ;; \
+        "linux/arm/v6")  ARCH="arm-unknown-linux-musleabi" ;; \
+        "linux/ppc64le")  ARCH="powerpc64le-unknown-linux-gnu" ;; \
+        "linux/s390x")  ARCH="s390x-unknown-linux-gnu" ;; \
+        *) echo "Unsupported platform: ${TARGETPLATFORM}" && exit 1 ;; \
+    esac && \
+    echo "Downloading rusty-wrenches for ${ARCH}" && \
+    wget -O /tmp/rusty-wrenches.tar.gz "https://github.com/nazar256/rusty-wrench/releases/download/${RUSTY_WRENCHES_VERSION}/rusty-wrench.${ARCH}.tar.gz" && \
+    cd /tmp && \
+    tar xzf rusty-wrenches.tar.gz -C /usr/local/bin/ && \
+    chmod +x /usr/local/bin/*
 
 # Release stage
 FROM ghcr.io/nazar256/mqdish-consumer:${BASE_IMAGE_VERSION}
