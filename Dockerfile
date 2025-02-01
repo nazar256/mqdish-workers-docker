@@ -12,6 +12,7 @@ FROM alpine:${ALPINE_VERSION} AS mqdish-cli
 
 ARG MQDISH_VERSION
 ARG TARGETPLATFORM
+ARG RUSTY_WRENCHES_VERSION
 
 RUN case "${TARGETPLATFORM}" in \
         "linux/amd64")  RUST_TARGET="x86_64-unknown-linux-musl" ;; \
