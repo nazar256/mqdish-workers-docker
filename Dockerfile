@@ -14,36 +14,36 @@ ARG MQDISH_VERSION
 ARG TARGETPLATFORM
 
 RUN case "${TARGETPLATFORM}" in \
-        "linux/amd64")  ARCH="x86_64-unknown-linux-musl" ;; \
-        "linux/386")  ARCH="i686-unknown-linux-musl" ;; \
-        "linux/arm64/v8")  ARCH="aarch64-unknown-linux-musl" ;; \
-        "linux/arm64")  ARCH="aarch64-unknown-linux-musl" ;; \
-        "linux/arm/v7")  ARCH="armv7-unknown-linux-musleabihf" ;; \
-        "linux/arm/v6")  ARCH="arm-unknown-linux-musleabi" ;; \
-        "linux/ppc64le")  ARCH="powerpc64le-unknown-linux-gnu" ;; \
-        "linux/s390x")  ARCH="s390x-unknown-linux-gnu" ;; \
+        "linux/amd64")  RUST_TARGET="x86_64-unknown-linux-musl" ;; \
+        "linux/386")  RUST_TARGET="i686-unknown-linux-musl" ;; \
+        "linux/arm64/v8")  RUST_TARGET="aarch64-unknown-linux-musl" ;; \
+        "linux/arm64")  RUST_TARGET="aarch64-unknown-linux-musl" ;; \
+        "linux/arm/v7")  RUST_TARGET="armv7-unknown-linux-musleabihf" ;; \
+        "linux/arm/v6")  RUST_TARGET="arm-unknown-linux-musleabi" ;; \
+        "linux/ppc64le")  RUST_TARGET="powerpc64le-unknown-linux-gnu" ;; \
+        "linux/s390x")  RUST_TARGET="s390x-unknown-linux-gnu" ;; \
         *) echo "Unsupported platform: ${TARGETPLATFORM}" && exit 1 ;; \
     esac && \
-    echo "Downloading mqdish for ${ARCH}" && \
-    wget -O /tmp/mqdish.tar.gz "https://github.com/nazar256/mqdish/releases/download/${MQDISH_VERSION}/mqdish.${ARCH}.tar.gz" && \
+    echo "Downloading mqdish for ${RUST_TARGET}" && \
+    wget -O /tmp/mqdish.tar.gz "https://github.com/nazar256/mqdish/releases/download/${MQDISH_VERSION}/mqdish.${RUST_TARGET}.tar.gz" && \
     cd /tmp && \
     tar xzf mqdish.tar.gz && \
     cp mqdish /usr/local/bin/ && \
     chmod +x /usr/local/bin/mqdish
 
 RUN case "${TARGETPLATFORM}" in \
-        "linux/amd64")  ARCH="x86_64-unknown-linux-musl" ;; \
-        "linux/386")  ARCH="i686-unknown-linux-musl" ;; \
-        "linux/arm64/v8")  ARCH="aarch64-unknown-linux-musl" ;; \
-        "linux/arm64")  ARCH="aarch64-unknown-linux-musl" ;; \
-        "linux/arm/v7")  ARCH="armv7-unknown-linux-musleabihf" ;; \
-        "linux/arm/v6")  ARCH="arm-unknown-linux-musleabi" ;; \
-        "linux/ppc64le")  ARCH="powerpc64le-unknown-linux-gnu" ;; \
-        "linux/s390x")  ARCH="s390x-unknown-linux-gnu" ;; \
+        "linux/amd64")  RUST_TARGET="x86_64-unknown-linux-musl" ;; \
+        "linux/386")  RUST_TARGET="i686-unknown-linux-musl" ;; \
+        "linux/arm64/v8")  RUST_TARGET="aarch64-unknown-linux-musl" ;; \
+        "linux/arm64")  RUST_TARGET="aarch64-unknown-linux-musl" ;; \
+        "linux/arm/v7")  RUST_TARGET="armv7-unknown-linux-musleabihf" ;; \
+        "linux/arm/v6")  RUST_TARGET="arm-unknown-linux-musleabi" ;; \
+        "linux/ppc64le")  RUST_TARGET="powerpc64le-unknown-linux-gnu" ;; \
+        "linux/s390x")  RUST_TARGET="s390x-unknown-linux-gnu" ;; \
         *) echo "Unsupported platform: ${TARGETPLATFORM}" && exit 1 ;; \
     esac && \
-    echo "Downloading rusty-wrenches for ${ARCH}" && \
-    wget -O /tmp/rusty-wrenches.tar.gz "https://github.com/nazar256/rusty-wrench/releases/download/${RUSTY_WRENCHES_VERSION}/rusty-wrench.${ARCH}.tar.gz" && \
+    echo "Downloading rusty-wrenches for ${RUST_TARGET}" && \
+    wget -O /tmp/rusty-wrenches.tar.gz "https://github.com/nazar256/rusty-wrenches/releases/download/${RUSTY_WRENCHES_VERSION}/rusty-wrenches.${RUST_TARGET}.tar.gz" && \
     cd /tmp && \
     tar xzf rusty-wrenches.tar.gz -C /usr/local/bin/ && \
     chmod +x /usr/local/bin/*
