@@ -81,7 +81,7 @@ process_file() {
     cmd="$cmd $(printf %q "$file")"
     echo "Dispatching conversion job for: $file"
     echo "Debug: echo '$cmd' | mqdish"
-    echo "$cmd" | mqdish --exclusive
+    echo "$cmd" | mqdish --exclusive=true
 }
 
 exit_code=0

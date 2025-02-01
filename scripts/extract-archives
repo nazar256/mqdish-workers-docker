@@ -67,7 +67,7 @@ process_file() {
     cmd="$cmd \"$file\""
     echo "Dispatching extraction job for: $file"
     echo "Debug: echo '$cmd' | mqdish"
-    echo "$cmd" | mqdish --exclusive
+    echo "$cmd" | mqdish --exclusive=true
 }
 
 exit_code=0
