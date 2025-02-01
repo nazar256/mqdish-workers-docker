@@ -2,6 +2,10 @@
 
 set -e
 
+# Set low CPU and IO priority
+renice -n 19 -p $$ >/dev/null
+ionice -c 3 -p $$ >/dev/null
+
 recursive=false
 trash_dir=""
 

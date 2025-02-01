@@ -2,8 +2,12 @@
 
 set -e
 
+# Set low CPU and IO priority
+renice -n 19 -p $$ >/dev/null
+ionice -c 3 -p $$ >/dev/null
+
 recursive=false
-ffmpeg_args="-c:v libx265 -preset slower -crf 28 -c:a libfdk_aac -profile:a aac_he_v2 -vbr 3 -c:s copy -tag:v hvc1"  # Default FFmpeg arguments
+ffmpeg_args="-c:v libx265 -preset slower -crf 28 -c:a libfdk_aac -profile:a aac_he_v2 -vbr 3 -c:s mov_text -tag:v hvc1"  # Default FFmpeg arguments
 trash_dir=""
 
 while [[ $# -gt 0 ]]; do
